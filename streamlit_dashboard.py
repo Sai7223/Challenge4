@@ -4,18 +4,33 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Load the dataset
-@st.cache
+# Load the dataset and clean it
+@st.cache_data
 def load_data():
+    # Load the dataset
     data = pd.read_csv('Police_Bulk_Data_2014_20241027.csv')
+
+    # Columns to keep
     columns_to_keep = [
         "offensedescription", "offenserace", "offensegender", "offenseage", 
         "offensezip", "offensestatus"
     ]
-    cleaned_data = data[columns_to_keep].dropna()
+
+    # Clean data
+    cleaned_data = data[columns_to_keep]
+
+    # Convert 'offenseage' to numeric, coercing errors to NaN (e.g., 'Withheld' becomes NaN)
+    cleaned_data['offenseage'] = pd.to_numeric(cleaned_data['offenseage'], errors='coerce')
+
+    # Drop rows with NaN values
+    cleaned_data = cleaned_data.dropna()
+
+    # Convert 'offenseage' to integer after cleaning
+    cleaned_data['offenseage'] = cleaned_data['offenseage'].astype(int)
+
     return cleaned_data
 
-# Load data
+# Load cleaned data
 data = load_data()
 
 # Title and description
@@ -32,10 +47,10 @@ age_range = st.sidebar.slider("Select Age Range",
                                max_value=int(data['offenseage'].max()),
                                value=(20, 50))
 
-# Filter data
+# Filter data based on selected offense and age range
 filtered_data = data[
-    (data['offensedescription'] == selected_offense) &
-    (data['offenseage'].astype(int).between(age_range[0], age_range[1]))
+    (data['offensedescription'] == selected_offense) & 
+    (data['offenseage'].between(age_range[0], age_range[1]))
 ]
 
 # Visualizations
@@ -55,7 +70,7 @@ st.pyplot(fig)
 st.subheader("Age vs ZIP Code")
 fig, ax = plt.subplots()
 sns.scatterplot(
-    x=filtered_data['offensezip'], y=filtered_data['offenseage'].astype(int), hue=filtered_data['offenserace'], ax=ax
+    x=filtered_data['offensezip'], y=filtered_data['offenseage'], hue=filtered_data['offenserace'], ax=ax
 )
 ax.set_title("Age vs ZIP Code")
 ax.set_xlabel("ZIP Code")
